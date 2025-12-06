@@ -1,0 +1,38 @@
+# Perplexity Local Agent - Configuration
+# Whitelist of allowed commands
+
+allowed_commands:
+  blender_script:
+    description: "Generate 3D models using Blender scripts"
+    timeout: 300
+    
+  python_script:
+    description: "Run Python scripts"
+    timeout: 120
+    
+  file_operation:
+    description: "File operations (create, read, write)"
+    timeout: 60
+    
+  open_program:
+    description: "Open programs and files"
+    timeout: 30
+
+# Security settings
+security:
+  max_command_length: 10000
+  require_confirmation: true
+  log_all_actions: true
+  blacklist_keywords:
+    - "taskkill"
+    - "format"
+    - "del /s /q"
+    - "rd /s /q"
+    - "cipher /w"
+
+# Server settings
+server:
+  host: "127.0.0.1"
+  port: 5000
+  debug: false
+  cors_enabled: true
