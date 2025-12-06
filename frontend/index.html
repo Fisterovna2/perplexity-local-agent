@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perplexity Local Agent Control Panel</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🤖 Perplexity Local Agent</h1>
+            <div class="status" id="status">Checking status...</div>
+        </header>
+
+        <main class="main-grid">
+            <!-- Panel: New Action -->
+            <section class="panel">
+                <h2>📋 Execute Action</h2>
+                <div class="form-group">
+                    <label>Action Type:</label>
+                    <select id="actionType">
+                        <option value="">-- Select --</option>
+                        <option value="blender_script">Blender Script (3D Models)</option>
+                        <option value="python_script">Python Script</option>
+                        <option value="file_operation">File Operation</option>
+                        <option value="open_program">Open Program</option>
+                        <option value="unity_build">Unity Build</option>
+                        <option value="godot_script">Godot Script</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Code/Command:</label>
+                    <textarea id="command" placeholder="Paste code or command here..." rows="10"></textarea>
+                </div>
+                <div class="button-group">
+                    <button id="validateBtn" class="btn btn-primary">✓️ Validate</button>
+                    <button id="infoBtn" class="btn btn-info">ℹ️ Info</button>
+                    <button id="executeBtn" class="btn btn-danger" disabled>Run</button>
+                </div>
+            </section>
+
+            <!-- Panel: Info Box -->
+            <section class="panel">
+                <h2>🔍 Action Info</h2>
+                <div id="infoBox" class="info-box">Select action to see details</div>
+            </section>
+
+            <!-- Panel: Results -->
+            <section class="panel">
+                <h2>✅ Results</h2>
+                <div id="resultBox" class="result-box">Waiting for action...</div>
+            </section>
+
+            <!-- Panel: Logs -->
+            <section class="panel">
+                <h2>📄 Logs</h2>
+                <div id="logsBox" class="logs-box">
+                    <p>Loading logs...</p>
+                </div>
+                <button id="clearLogsBtn" class="btn btn-secondary">Clear Logs</button>
+            </section>
+        </main>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <h2>⚠️ Confirm Action</h2>
+            <p id="confirmText"></p>
+            <div class="command-preview">
+                <strong>Command:</strong>
+                <pre id="commandPreview"></pre>
+            </div>
+            <div class="risk-warning">
+                <strong>⚠️ Risks:</strong>
+                <ul id="risksList"></ul>
+            </div>
+            <div class="modal-buttons">
+                <button id="confirmYes" class="btn btn-danger">Confirm & Run</button>
+                <button id="confirmNo" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
