@@ -1,4 +1,26 @@
+# Perplexity Local Agent - Backend Dependencies
+# Production-Grade Python Requirements
+
+# Core Web Framework
 Flask==2.3.0
 Flask-CORS==4.0.0
+
+# Configuration Management
 PyYAML==6.0
-requests==2.31.0
+
+# Utilities
+Python-dotenv==1.0.0
+click==8.1.3
+Werkzeug==2.3.0
+
+# Optional: LLM Integration (uncomment if needed)
+# ollama==0.1.0
+# requests==2.31.0
+
+# Optional: Database (uncomment if needed)
+# SQLAlchemy==2.0.0
+# Flask-SQLAlchemy==3.0.0
+
+# Optional: Advanced Features
+# Blender Python API (requires Blender installation)
+# bpy (install from Blender distribution)
