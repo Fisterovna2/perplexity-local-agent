@@ -1,4 +1,58 @@
 # Perplexity Local Agent - Configuration
+
+# Safety modules settings
+safety:
+  # Internet safety with VirusTotal
+  virustotal:
+    enabled: true
+    api_key: "YOUR_VIRUSTOTAL_API_KEY"  # Get from https://www.virustotal.com/
+    scan_timeout: 120
+    max_file_size_mb: 100
+    auto_delete_dangerous: true
+    
+  # User confirmation system
+  confirmation:
+    enabled: true
+    require_confirmation: true  # Ask before every PC action
+    show_info_button: true  # Show INFO with detailed action description
+    timeout_seconds: 60
+    auto_deny_dangerous: true
+    
+  # Self-protection
+  self_protection:
+    enabled: true
+    protect_backend: true  # Block modifications to backend/ directory
+    protect_config: true  # Block modifications to config.yaml
+    check_integrity: true  # Check file hashes on startup
+    critical_files:
+      - "agent.py"
+      - "self_protection.py"
+      - "confirmation_system.py"
+      - "internet_safety.py"
+      - "config.yaml"
+
+# Vision & Input Control settings
+vision:
+  enabled: true
+  screenshot_interval: 1.0  # seconds
+  ocr_enabled: true
+  
+input_control:
+  enabled: true
+  mouse_control: true
+  keyboard_control: true
+  
+# Autonomous agent settings
+autonomous:
+  enabled: true
+  auto_propose_projects: true
+  require_approval: true  # Always ask before starting autonomous projects
+  
+# Telegram bot settings
+telegram:
+  enabled: false  # Set to true and add token to enable
+  bot_token: "YOUR_TELEGRAM_BOT_TOKEN"
+  allowed_users: []  # List of allowed Telegram user IDs
 # Whitelist of allowed commands
 
 allowed_commands:
