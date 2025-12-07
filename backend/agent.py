@@ -320,7 +320,7 @@ def get_info():
         'status': 'running',
         'tools': commands,
         'safety_level': 'MAXIMUM',
-        'requires_confirmation': CONFIG['safety']['require_confirmation'],
+        'require_confirmation': CONFIG.get('safety', {}).get('require_confirmation', True),
         'timestamp': datetime.now().isoformat()
     })
 
