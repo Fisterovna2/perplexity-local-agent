@@ -5,7 +5,7 @@ safety:
   # Internet safety with VirusTotal
   virustotal:
     enabled: true
-    api_key: "YOUR_VIRUSTOTAL_API_KEY"  # Get from https://www.virustotal.com/
+    api_key: "210aa3d402bf884e04b84ad745b5e04fedae640982f2e364b1a3944841889e52"  # Get from https://www.virustotal.com/
     scan_timeout: 120
     max_file_size_mb: 100
     auto_delete_dangerous: true
@@ -51,7 +51,7 @@ autonomous:
 # Telegram bot settings
 telegram:
   enabled: false  # Set to true and add token to enable
-  bot_token: "YOUR_TELEGRAM_BOT_TOKEN"
+  bot_token: "8253285683:AAEg2_soyuwXWCXrjZTSNErjhJlAc2KOWnQ"
   allowed_users: []  # List of allowed Telegram user IDs
 # Whitelist of allowed commands
 
