@@ -24,3 +24,9 @@ Werkzeug==2.3.0
 # Optional: Advanced Features
 # Blender Python API (requires Blender installation)
 # bpy (install from Blender distribution)
+# Telegram Bot Integration
+python-telegram-bot==20.3
+schedule==1.2.0
+
+# Async Support
+asyncio-contextmanager==1.0.0
