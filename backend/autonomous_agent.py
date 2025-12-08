@@ -1,5 +1,5 @@
-# Autonomous Agent - Работает самостоятельно без запросов
-# Придумывает проекты, предлагает идеи, сам их выполняет
+# Автономный Агент - Рабочий самостоятельный база запросов
+# Предусмотрев проекты, предлагает идеи, сам их выполняет
 
 import json
 import time
@@ -11,104 +11,132 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class ProjectGenerator:
-    """Генератор идей для проектов"""
+class AutonomousAgent:
+    """Автономный агент выполняет очередь задач"""
     
     def __init__(self):
+        self.tasks = {}
+        self.current_task = None
+        self.running = False
         self.ideas = [
-            "Открыть Roblox и пройти обби",
-            "Составить список сайтов для программистов",
+            "Открыть Roblox и поиграть обед",
+            "Составить список сайтов для программирования",
             "Создать Python скрипт для автоматизации",
-            "Загрузить часть банка регистров",
-            "Придумать оригинальные числа и проверить способ расчёта"
+            "Загрузить часть базы реестров",
+            "Исследовать оригинальные числа и проверить расчета"
         ]
         self.completed_projects = []
     
-    def generate_idea(self) -> Dict:
+    def generate_ideas(self) -> Dict:
         """Генерирует случайную идею"""
         idea_text = random.choice(self.ideas)
         return {
             'id': len(self.completed_projects) + 1,
             'description': idea_text,
             'timestamp': datetime.now().isoformat(),
-            'status': 'proposed',
-            'priority': random.randint(1, 5)
+            'status': 'proposed'
         }
     
     def propose_idea(self) -> Dict:
-        """Предлагает агентом идею"""
-        idea = self.generate_idea()
-        logger.info(f"Предложена идея: {idea['description']}")
-        return idea
-
-class AutonomousAgent:
-    """Автономный агент - работает самостоятельно"""
-    
-    def __init__(self, vision_controller, input_controller):
-        self.generator = ProjectGenerator()
-        self.vision = vision_controller
-        self.input = input_controller
-        self.current_project = None
-        self.running = False
-        self.approved_ideas = []
-        self.rejected_ideas = []
-    
-    def propose_next_project(self) -> Dict:
-        """Предлагает следующий проект"""
-        idea = self.generator.propose_idea()
-        self.current_project = idea
+        """Предлагает агентом идея"""
+        idea = self.generate_ideas()
+        logger.info(f"Предложена идея: {idea}")
+        print(f"💡 Идея #{idea['id']}: {idea['description']}")
         return idea
     
-    def approve_project(self) -> bool:
-        """Одобряет текущий проект"""
-        if self.current_project:
-            self.current_project['status'] = 'approved'
-            self.approved_ideas.append(self.current_project)
-            logger.info(f"Проект одобрен: {self.current_project['description']}")
-            return True
-        return False
-    
-    def reject_project(self) -> bool:
-        """Отклоняет проект"""
-        if self.current_project:
-            self.current_project['status'] = 'rejected'
-            self.rejected_ideas.append(self.current_project)
-            logger.info(f"Проект отклонён: {self.current_project['description']}")
-            return True
-        return False
-    
-    def execute_project(self, project: Dict) -> bool:
-        """Выполняет проект"""
-        logger.info(f"Выполняю проект: {project['description']}")
-        project['status'] = 'running'
-        time.sleep(2)
-        project['status'] = 'completed'
-        logger.info(f"Проект завершён")
+    def add_task(self, task_id: int, task_data: Dict) -> bool:
+        """Добавить задачу в очередь"""
+        self.tasks[task_id] = task_data
+        logger.info(f"Задача {task_id} добавлена: {task_data}")
         return True
     
-    def start_auto_mode(self):
-        """Запускает автономный режим"""
+    def get_next_task(self):
+        """Получить следующую задачу со статусом pending"""
+        for task_id, task in self.tasks.items():
+            if task.get("status") == "pending":
+                return task_id, task
+        return None, None
+    
+    def execute_task(self, task):
+        """Выполнить задачу"""
+        logger.info(f"Выполняю задачу: {task}")
+        print(f"▶️ Выполняю: {task}")
+        
+        task_type = task.get("type")
+        
+        if task_type == "game":
+            self.execute_game(task)
+        elif task_type == "task":
+            self.execute_generic_task(task)
+        elif task_type == "project":
+            self.execute_project(task)
+    
+    def execute_game(self, task):
+        """Выполнить игровую задачу"""
+        game = task.get("game")
+        game_task = task.get("task")
+        
+        print(f"🎮 Запускаю {game}: {game_task}")
+        logger.info(f"Game task: {game} - {game_task}")
+        
+        # Имитация работы
+        time.sleep(2)
+    
+    def execute_generic_task(self, task):
+        """Выполнить обычную задачу"""
+        text = task.get("text")
+        
+        print(f"📝 Выполняю: {text}")
+        logger.info(f"Task: {text}")
+        
+        time.sleep(2)
+    
+    def execute_project(self, task):
+        """Выполнить проект"""
+        project_name = task.get("project")
+        description = task.get("description")
+        
+        print(f"🚀 Проект: {project_name}")
+        print(f"📋 Описание: {description}")
+        logger.info(f"Project: {project_name} - {description}")
+        
+        time.sleep(2)
+    
+    def run(self):
+        """Основной цикл агента"""
         self.running = True
-        logger.info("Автономный режим включен")
+        print("🤖 Автономный агент запущен!")
         
-        def auto_loop():
-            while self.running:
-                self.propose_next_project()
-                time.sleep(2)  # Можно одобрить через API/Telegram
-        
-        thread = threading.Thread(target=auto_loop, daemon=True)
-        thread.start()
+        while self.running:
+            task_id, task = self.get_next_task()
+            
+            if task:
+                print(f"\n✅ Найдена задача ID {task_id}")
+                self.current_task = task_id
+                
+                task["status"] = "running"
+                
+                try:
+                    self.execute_task(task)
+                    task["status"] = "done"
+                    self.completed_projects.append(task_id)
+                except Exception as e:
+                    task["status"] = "error"
+                    logger.error(f"Error: {str(e)}")
+                
+                print(f"✅ Задача {task_id} завершена\n")
+            else:
+                # Если нет задач, генерируй идеи
+                print("💡 Нет задач в очереди. Генерирую идеи...")
+                self.propose_idea()
+            
+            time.sleep(2)
     
-    def stop_auto_mode(self):
-        """Отключает автономный режим"""
+    def stop(self):
+        """Остановить агента"""
         self.running = False
-        logger.info("Автономный режим отключен")
-    
-    def get_stats(self) -> Dict:
-        """Гет статистику"""
-        return {
-            'approved': len(self.approved_ideas),
-            'rejected': len(self.rejected_ideas),
-            'current_project': self.current_project,
-            'running': self.running
-        }
+        print("❌ Агент остановлен")
+
+if __name__ == "__main__":
+    agent = AutonomousAgent()
+    agent.run()
