@@ -1,32 +1,86 @@
-# Perplexity Local Agent - Backend Dependencies
-# Production-Grade Python Requirements
+# Perplexity Local Agent - Complete Backend Dependencies
+# Production-Grade Requirements for Games, 3D, Projects & Automation
 
-# Core Web Framework
+# ============================================================================
+# CORE WEB FRAMEWORK
+# ============================================================================
 Flask==2.3.0
 Flask-CORS==4.0.0
 
-# Configuration Management
+# ============================================================================
+# CONFIGURATION & UTILITIES
+# ============================================================================
 PyYAML==6.0
-
-# Utilities
-Python-dotenv==1.0.0
+python-dotenv==1.0.0
 click==8.1.3
 Werkzeug==2.3.0
 
-# Optional: LLM Integration (uncomment if needed)
-# ollama==0.1.0
-# requests==2.31.0
-
-# Optional: Database (uncomment if needed)
-# SQLAlchemy==2.0.0
-# Flask-SQLAlchemy==3.0.0
-
-# Optional: Advanced Features
-# Blender Python API (requires Blender installation)
-# bpy (install from Blender distribution)
-# Telegram Bot Integration
+# ============================================================================
+# TELEGRAM BOT & SCHEDULING
+# ============================================================================
 python-telegram-bot==20.3
 schedule==1.2.0
 
-# Async Support
-asyncio-contextmanager==1.0.0
+# ============================================================================
+# GAME AUTOMATION & CONTROL
+# ============================================================================
+pyautogui==0.9.53
+pynput==1.7.6
+Pillow==10.0.0
+opencv-python==4.8.0
+pytesseract==0.3.10
+
+# ============================================================================
+# NETWORK & API REQUESTS
+# ============================================================================
+requests==2.31.0
+urllib3==2.0.7
+
+# ============================================================================
+# LLM & AI INTEGRATION
+# ============================================================================
+# Uncomment if using Ollama locally:
+# ollama==0.1.0
+
+# Uncomment if using OpenAI/Perplexity API:
+# openai==1.3.0
+
+# ============================================================================
+# 3D MODELING (Blender Integration)
+# ============================================================================
+# Note: Blender must be installed separately from blender.org
+# Then install bpy from Blender Python:
+# C:\Program Files\Blender Foundation\Blender 4.0\4.0\python\bin\pip.exe install bpy
+
+# Or use: pip install bpy
+# bpy is commented out because it requires Blender installation
+
+# ============================================================================
+# VIDEO & MEDIA PROCESSING
+# ============================================================================
+opencv-contrib-python==4.8.0
+# moviepy==1.0.3  # For video editing
+# ffmpeg-python==0.2.1  # For FFmpeg integration
+
+# ============================================================================
+# PROJECT & CODE GENERATION
+# ============================================================================
+jinja2==3.1.2
+markdown==3.5.1
+pygments==2.17.2
+
+# ============================================================================
+# DATABASE (Optional)
+# ============================================================================
+# SQLAlchemy==2.0.0
+# Flask-SQLAlchemy==3.0.0
+
+# ============================================================================
+# SYSTEM & PROCESS MANAGEMENT
+# ============================================================================
+psutil==5.9.6
+
+# ============================================================================
+# LOGGING & MONITORING
+# ============================================================================
+coloredlogs==15.0.1
