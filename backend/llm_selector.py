@@ -1,8 +1,7 @@
 """LLM Model Selector - Central Hub for All AI Models
 
-Supports: GPT-4o, Claude 3.5 Sonnet, Gemini Pro, Grok 2, Llama 3, Perplexity, Sonar
+Supports: Sonar, GPT-5.1, Claude Opus 4.5, Gemini 2 Pro, Grok 4.1, Kimi K2,  Claude Sonnet 4.5
 User selects model in Comet, agent uses it for ALL decisions
-
 Fair Play Mode ENABLED:
 - NO cheats
 - NO memory hacking
@@ -25,14 +24,13 @@ load_dotenv()
 
 class ModelProvider(Enum):
     """Available LLM providers"""
-    OPENAI = "gpt-4o"
-    ANTHROPIC = "claude-3.5-sonnet"
-    GOOGLE = "gemini-pro"
-    GROK = "grok-2"
-    OLLAMA = "llama-3-local"
-    PERPLEXITY = "perplexity-pro"
     SONAR = "sonar"
-
+    GPT5_1 = "gpt-5.1"
+    CLAUDE_OPUS = "claude-opus-4.5"
+    GEMINI_2_PRO = "gemini-2-pro"
+    GROK_4_1 = "grok-4.1"
+    KIMI_K2 = "kimi-k2"
+    CLAUDE_SONNET_45 = "claude-sonnet-4.5"
 
 @dataclass
 class ModelConfig:
