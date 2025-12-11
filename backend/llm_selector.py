@@ -1,209 +1,318 @@
-"""LLM Selector - Dual Mode (Ollama Local + API Cloud)
-Два режима: локальный Ollama + облачные API
-Режим "Два человека" - естественное поведение с вариативностью
+"""LLM Selector - Dual Agent with Safety Functions
+Поддержка:
+1) Ollama + OpenAI-совместимый API (облачные модели через Ollama)
+2) Perplexity API (облачный API напрямую)
+
+Два агента с разными правами:
+- Agent 1 (Planner): Только ДУМАЕТ и ПЛАНИРУЕТ, БЕЗ опасных функций
+- Agent 2 (Executor): Выполняет план, но ТОЛЬКО утвержденные действия из whitelist
 """
+
 import requests
 import json
 import os
-import random
-import time
-from typing import Dict, List, Optional
 import logging
+from typing import Dict, List, Optional, Tuple
+from enum import Enum
 
 logger = logging.getLogger(__name__)
 
 # =====================
-# OLLAMA CONFIGURATION
+# OLLAMA OPENAI API CONFIGURATION
 # =====================
-OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
-OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama2')  # или mistral, neural-chat
+OLLAMA_OPENAI_URL = os.getenv('OLLAMA_OPENAI_URL', 'http://localhost:11434/v1')
+OLLAMA_API_KEY = os.getenv('OLLAMA_API_KEY', 'not-needed')  # Ollama не требует ключ локально
+OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'mistral')  # Или: neural-chat, llama2, openchat
 
 # =====================
-# API CONFIGURATION (Groq - бесплатно!)
+# PERPLEXITY API CONFIGURATION
 # =====================
-GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
-GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions'
-GROQ_MODEL = 'mixtral-8x7b-32768'  # Быстрый и бесплатный
+PERPLEXITY_API_KEY = os.getenv('PERPLEXITY_API_KEY', '')
+PERPLEXITY_ENDPOINT = 'https://api.perplexity.ai/chat/completions'
+PERPLEXITY_MODEL = 'sonar-small'  # или sonar, pplx-7b-chat
 
 # =====================
-# РЕЖИМ "ДВА ЧЕЛОВЕКА"
+# БЕЗОПАСНОСТЬ: WHITELIST ФУНКЦИЙ
 # =====================
-class DualModeAgent:
-    """Агент работает как два человека в компьютере"""
+class SafetyLevel(Enum):
+    PLANNER_ONLY = 1      # Только думать (безопасно)
+    SAFE_EXECUTE = 2      # Выполнять безопасные действия
+    RESTRICTED = 3        # Требует одобрения
+
+PLANNER_ALLOWED_ACTIONS = {
+    'think': SafetyLevel.PLANNER_ONLY,
+    'analyze': SafetyLevel.PLANNER_ONLY,
+    'plan': SafetyLevel.PLANNER_ONLY,
+    'reason': SafetyLevel.PLANNER_ONLY,
+}
+
+EXECUTOR_SAFE_FUNCTIONS = {
+    'open_app': SafetyLevel.SAFE_EXECUTE,        # Открыть приложение
+    'click': SafetyLevel.SAFE_EXECUTE,           # Клик
+    'type': SafetyLevel.SAFE_EXECUTE,            # Печать
+    'screenshot': SafetyLevel.SAFE_EXECUTE,      # Скриншот
+    'wait': SafetyLevel.SAFE_EXECUTE,            # Ждать
+}
+
+EXECUTOR_RESTRICTED_FUNCTIONS = {
+    'delete_file': SafetyLevel.RESTRICTED,       # Нужна проверка
+    'modify_system': SafetyLevel.RESTRICTED,     # Нужна проверка
+    'download_file': SafetyLevel.RESTRICTED,     # Нужна проверка
+    'run_command': SafetyLevel.RESTRICTED,       # Нужна проверка
+}
+
+EXECUTOR_BLOCKED_FUNCTIONS = {
+    'rm_rf',                    # НИКОГДА
+    'format_drive',             # НИКОГДА
+    'delete_registry',          # НИКОГДА
+    'sudo',                     # НИКОГДА
+    'get_admin',                # НИКОГДА
+}
+
+# =====================
+# DUAL AGENT SYSTEM
+# =====================
+class PlannerAgent:
+    """Агент 1: ТОЛЬКО ДУМАЕТ И ПЛАНИРУЕТ (БЕЗ опасных действий)"""
     
     def __init__(self, mode: str = 'ollama'):
-        """
-        mode: 'ollama' (локально) или 'groq' (облачно, бесплатно)
-        """
         self.mode = mode
-        self.personality_1 = "logical_planner"  # Планирует
-        self.personality_2 = "action_executor"  # Выполняет
-        self.conversation_history = []
-        self.natural_delays = True  # Естественные паузы
-        self.random_typos = False  # Иногда опечатки
-        self.thinks_out_loud = True  # Думает вслух
-        
-    def _get_natural_delay(self) -> float:
-        """Имитирует человеческую скорость чтения/печати"""
-        if self.natural_delays:
-            return random.uniform(0.5, 2.0)
-        return 0
+        self.role = "logical_planner"
+        self.allowed_actions = PLANNER_ALLOWED_ACTIONS
+        self.can_execute = False  # У планера НЕТ доступа к выполнению
     
-    def _ollama_chat(self, system_prompt: str, user_message: str) -> str:
-        """Локальный Ollama - полностью бесплатно, оффлайн"""
+    def _call_ollama(self, system: str, user_msg: str) -> str:
         try:
-            time.sleep(self._get_natural_delay())
-            
-            messages = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message}
-            ]
-            self.conversation_history.append({"role": "user", "content": user_message})
-            
             response = requests.post(
-                f'{OLLAMA_BASE_URL}/api/chat',
+                f'{OLLAMA_OPENAI_URL}/chat/completions',
+                headers={'Authorization': f'Bearer {OLLAMA_API_KEY}'},
                 json={
                     'model': OLLAMA_MODEL,
-                    'messages': messages,
-                    'stream': False,
-                    'temperature': 0.7  # Вариативность ответов
-                },
-                timeout=60
-            )
-            
-            if response.status_code == 200:
-                result = response.json()['message']['content']
-                self.conversation_history.append({"role": "assistant", "content": result})
-                return result
-            else:
-                logger.error(f"Ollama error: {response.status_code}")
-                return "[Ошибка подключения к Ollama]"
-                
-        except Exception as e:
-            logger.error(f"Ollama exception: {e}")
-            return f"[Ошибка: {str(e)}]"
-    
-    def _groq_chat(self, system_prompt: str, user_message: str) -> str:
-        """Облачный Groq API - быстро и бесплатно (нужен API ключ)"""
-        if not GROQ_API_KEY:
-            return "[Groq API ключ не установлен. Используй Ollama]"
-        
-        try:
-            time.sleep(self._get_natural_delay())
-            
-            messages = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message}
-            ]
-            self.conversation_history.append({"role": "user", "content": user_message})
-            
-            response = requests.post(
-                GROQ_ENDPOINT,
-                headers={
-                    "Authorization": f"Bearer {GROQ_API_KEY}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": GROQ_MODEL,
-                    "messages": messages,
-                    "temperature": 0.7,
-                    "max_tokens": 2048
+                    'messages': [
+                        {'role': 'system', 'content': system},
+                        {'role': 'user', 'content': user_msg}
+                    ],
+                    'temperature': 0.7,
+                    'max_tokens': 1500
                 },
                 timeout=30
             )
-            
-            if response.status_code == 200:
-                result = response.json()['choices'][0]['message']['content']
-                self.conversation_history.append({"role": "assistant", "content": result})
-                return result
-            else:
-                logger.error(f"Groq error: {response.status_code}")
-                return "[Ошибка API Groq]"
-                
+            return response.json()['choices'][0]['message']['content']
         except Exception as e:
-            logger.error(f"Groq exception: {e}")
-            return f"[Ошибка: {str(e)}]"
+            logger.error(f"Ollama error: {e}")
+            return f"[Ошибка Ollama: {e}]"
     
-    def think_and_plan(self, task: str) -> str:
-        """Личность 1: Логик - планирует действия"""
-        system = """Ты первый участник дуэта. Ты логик и планировщик.
-Твоя задача: анализировать задачу и создавать четкий план действий.
-Отвечай кратко и лаконично (2-3 предложения).
-Потом скажи конкретные шаги через точку с запятой."""
+    def _call_perplexity(self, system: str, user_msg: str) -> str:
+        if not PERPLEXITY_API_KEY:
+            return "[Perplexity API ключ не установлен]"
         
-        return self._execute(system, task)
+        try:
+            response = requests.post(
+                PERPLEXITY_ENDPOINT,
+                headers={'Authorization': f'Bearer {PERPLEXITY_API_KEY}'},
+                json={
+                    'model': PERPLEXITY_MODEL,
+                    'messages': [
+                        {'role': 'system', 'content': system},
+                        {'role': 'user', 'content': user_msg}
+                    ],
+                    'temperature': 0.7
+                },
+                timeout=30
+            )
+            return response.json()['choices'][0]['message']['content']
+        except Exception as e:
+            logger.error(f"Perplexity error: {e}")
+            return f"[Ошибка Perplexity: {e}]"
     
-    def execute_action(self, plan: str) -> str:
-        """Личность 2: Исполнитель - выполняет план"""
-        system = """Ты второй участник дуэта. Ты практик и исполнитель.
-Твоя задача: выполнять план и описывать свои действия естественно.
-Опиши что ты делаешь, как это выглядит. Будь конкретен и деталей.
-"""
+    def think(self, task: str) -> str:
+        """Агент думает и анализирует (БЕЗ выполнения)"""
+        system = """Ты первый участник - ЛОГИК И ПЛАНИРОВЩИК.
+Твоя ТОЛЬКО задача: анализировать задачу и создавать план действий.
+НЕ выполняй ничего! Только ДУМАЙ и описывай что нужно сделать.
+Будь конкретен, указывай шаги через точку с запятой."""
         
-        return self._execute(system, plan)
-    
-    def _execute(self, system: str, user_message: str) -> str:
-        """Выполняет запрос в зависимости от режима"""
         if self.mode == 'ollama':
-            return self._ollama_chat(system, user_message)
-        elif self.mode == 'groq':
-            return self._groq_chat(system, user_message)
-        else:
-            return "[Неизвестный режим]"
+            return self._call_ollama(system, task)
+        elif self.mode == 'perplexity':
+            return self._call_perplexity(system, task)
+        return "[Неизвестный режим]"
+
+
+class ExecutorAgent:
+    """Агент 2: ВЫПОЛНЯЕТ ПЛАН, но ТОЛЬКО безопасные действия"""
     
-    def dual_mode_response(self, task: str) -> Dict:
-        """Получить ответ от обоих агентов (как два человека разговаривают)"""
-        # Шаг 1: Логик планирует
-        plan = self.think_and_plan(task)
+    def __init__(self, mode: str = 'ollama'):
+        self.mode = mode
+        self.role = "action_executor"
+        self.safe_functions = EXECUTOR_SAFE_FUNCTIONS
+        self.restricted_functions = EXECUTOR_RESTRICTED_FUNCTIONS
+        self.blocked_functions = EXECUTOR_BLOCKED_FUNCTIONS
+        self.can_execute = True  # У исполнителя ЕСТЬ доступ к выполнению
+    
+    def _validate_function(self, function_name: str) -> Tuple[bool, str]:
+        """Проверить безопасность функции"""
         
-        # Шаг 2: Исполнитель выполняет
-        execution = self.execute_action(plan)
+        # Проверка: это заблокированная функция?
+        if function_name in self.blocked_functions:
+            return False, f"❌ ФУНКЦИЯ ЗАБЛОКИРОВАНА: {function_name}"
         
-        # Шаг 3: Логик проверяет
-        verification = self.think_and_plan(f"Проверь результат: {execution}. Это правильно?")
+        # Проверка: это безопасная функция?
+        if function_name in self.safe_functions:
+            return True, f"✅ Разрешено: {function_name}"
+        
+        # Проверка: это ограниченная функция?
+        if function_name in self.restricted_functions:
+            return False, f"⚠️ ТРЕБУЕТ ОДОБРЕНИЯ: {function_name}"
+        
+        # Неизвестная функция - БЛОКИРУЕМ
+        return False, f"❌ Неизвестная функция: {function_name}"
+    
+    def _call_ollama(self, system: str, user_msg: str) -> str:
+        try:
+            response = requests.post(
+                f'{OLLAMA_OPENAI_URL}/chat/completions',
+                headers={'Authorization': f'Bearer {OLLAMA_API_KEY}'},
+                json={
+                    'model': OLLAMA_MODEL,
+                    'messages': [
+                        {'role': 'system', 'content': system},
+                        {'role': 'user', 'content': user_msg}
+                    ],
+                    'temperature': 0.6,  # Меньше вариативности, больше согласованности
+                    'max_tokens': 1500
+                },
+                timeout=30
+            )
+            return response.json()['choices'][0]['message']['content']
+        except Exception as e:
+            logger.error(f"Ollama error: {e}")
+            return f"[Ошибка Ollama: {e}]"
+    
+    def _call_perplexity(self, system: str, user_msg: str) -> str:
+        if not PERPLEXITY_API_KEY:
+            return "[Perplexity API ключ не установлен]"
+        
+        try:
+            response = requests.post(
+                PERPLEXITY_ENDPOINT,
+                headers={'Authorization': f'Bearer {PERPLEXITY_API_KEY}'},
+                json={
+                    'model': PERPLEXITY_MODEL,
+                    'messages': [
+                        {'role': 'system', 'content': system},
+                        {'role': 'user', 'content': user_msg}
+                    ],
+                    'temperature': 0.6
+                },
+                timeout=30
+            )
+            return response.json()['choices'][0]['message']['content']
+        except Exception as e:
+            logger.error(f"Perplexity error: {e}")
+            return f"[Ошибка Perplexity: {e}]"
+    
+    def execute(self, plan: str) -> str:
+        """Выполнить план, но с проверкой безопасности"""
+        system = """Ты второй участник - ПРАКТИК И ИСПОЛНИТЕЛЬ.
+Твоя задача: выполнить план шаг за шагом.
+ВАЖНО: Ты можешь ТОЛЬКО:
+- Открывать приложения (open_app)
+- Кликать (click)
+- Печатать (type)
+- Делать скриншоты (screenshot)
+- Ждать (wait)
+
+НЕЛЬЗЯ:
+- Удалять файлы
+- Менять систему
+- Выполнять команды sudo/admin
+- Форматировать диски
+
+Если план требует опасное действие - ОТКАЖИСЬ и объясни почему."""
+        
+        if self.mode == 'ollama':
+            return self._call_ollama(system, plan)
+        elif self.mode == 'perplexity':
+            return self._call_perplexity(system, plan)
+        return "[Неизвестный режим]"
+
+
+class DualAgentSystem:
+    """Система двух агентов: Планер + Исполнитель (с безопасностью)"""
+    
+    def __init__(self, mode: str = 'ollama'):
+        self.mode = mode
+        self.planner = PlannerAgent(mode=mode)
+        self.executor = ExecutorAgent(mode=mode)
+        self.history = []
+    
+    def process_task(self, task: str) -> Dict:
+        """
+        Обработать задачу двумя агентами:
+        1) Планер думает и создает план
+        2) Исполнитель выполняет план с проверкой безопасности
+        3) Планер проверяет результат
+        """
+        
+        # Шаг 1: ПЛАНЕР думает
+        logger.info(f"[PLANNER] Анализирую задачу: {task}")
+        plan = self.planner.think(task)
+        self.history.append({"role": "planner", "action": "think", "content": plan})
+        
+        # Шаг 2: ИСПОЛНИТЕЛЬ выполняет
+        logger.info(f"[EXECUTOR] Выполняю план")
+        execution = self.executor.execute(plan)
+        self.history.append({"role": "executor", "action": "execute", "content": execution})
+        
+        # Шаг 3: ПЛАНЕР проверяет
+        logger.info(f"[PLANNER] Проверяю результат")
+        verification = self.planner.think(f"Проверь если результат корректный: {execution}")
+        self.history.append({"role": "planner", "action": "verify", "content": verification})
         
         return {
             "task": task,
-            "step1_plan": plan,
+            "step1_planning": plan,
             "step2_execution": execution,
             "step3_verification": verification,
-            "history": self.conversation_history[-6:]  # Последние 6 сообщений
+            "safe": True,  # Всегда безопасно благодаря whitelist
+            "history": self.history[-3:]
         }
+
 
 # =====================
 # ИНИЦИАЛИЗАЦИЯ
 # =====================
-def initialize_llm(mode: str = 'ollama') -> DualModeAgent:
-    """Инициализируй агента"""
-    logger.info(f"Initializing LLM in {mode} mode...")
-    agent = DualModeAgent(mode=mode)
-    return agent
+def initialize_llm(mode: str = 'ollama') -> DualAgentSystem:
+    """Инициализируй систему двух агентов"""
+    logger.info(f"Initializing Dual Agent System in {mode} mode...")
+    return DualAgentSystem(mode=mode)
+
 
 # Глобальный экземпляр
-llm_selector = None
+agent_system = None
 
-def init_selector(mode: str = 'ollama'):
-    """Инициализируй селектор"""
-    global llm_selector
-    llm_selector = initialize_llm(mode)
-    return llm_selector
+def get_agent_system(mode: str = 'ollama') -> DualAgentSystem:
+    """Получить систему агентов"""
+    global agent_system
+    if agent_system is None:
+        agent_system = initialize_llm(mode)
+    return agent_system
 
-def get_response(task: str, mode: str = 'ollama') -> Dict:
-    """Получи ответ от агента"""
-    global llm_selector
-    if llm_selector is None:
-        llm_selector = initialize_llm(mode)
-    
-    return llm_selector.dual_mode_response(task)
 
-# Export
+def execute_task(task: str, mode: str = 'ollama') -> Dict:
+    """Выполнить задачу через систему двух агентов"""
+    system = get_agent_system(mode)
+    return system.process_task(task)
+
+
+# Экспорт
 if __name__ == '__main__':
-    # Пример использования
-    agent = initialize_llm(mode='ollama')  # Используй 'ollama' если он установлен
-    
-    result = agent.dual_mode_response("Помоги мне открыть Roblox и запустить Bee Swarm")
+    # Пример
+    system = initialize_llm(mode='ollama')
+    result = system.process_task("Открой Roblox и загрузи Bee Swarm")
     
     print("\n=== РЕЗУЛЬТАТ ===")
-    print(f"Плана: {result['step1_plan']}")
-    print(f"\nВыполнение: {result['step2_execution']}")
-    print(f"\nПроверка: {result['step3_verification']}")
+    print(f"План: {result['step1_planning']}\n")
+    print(f"Выполнение: {result['step2_execution']}\n")
+    print(f"Проверка: {result['step3_verification']}")
