@@ -1,6 +1,7 @@
 import argparse
 import yaml
 from pathlib import Path
+from cli_interface import CLIInterface
 
 CONFIG_PATH = Path(__file__).parent / 'config.yaml'
 
@@ -53,9 +54,16 @@ def main():
             save_config(config)
             print(f"\n✅ Режим безопасности: {mode}\n")
     parser.add_argument('--telegram', action='store_true')
+        parser.add_argument('--cli', action='store_true', help='Run interactive CLI interface')
     parser.add_argument('--brain', choices=['ollama', 'api', 'comet_chat'])
         parser.add_argument('--mode', choices=['normal', 'fairplay', 'curious'], help='Safety mode')
     args = parser.parse_args()
+
+    # Run CLI interface if --cli flag is set
+    if args.cli:
+        cli = CLIInterface()
+        cli.run_interactive()
+        return
     
     if args.brain:
         set_brain_mode(args.brain)
