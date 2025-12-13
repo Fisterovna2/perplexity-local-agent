@@ -90,3 +90,39 @@ server:
   port: 5000
   debug: false
   cors_enabled: true
+
+
+# Режимы работы агента
+modes:
+  active: "normal"  # normal / fairplay / curious
+  
+  normal:
+    description: "Полный доступ в рамках safety и whitelist"
+  
+  fairplay:
+    enabled: true
+    description: "Честная игра без читов"
+    allow_memory_hacks: false
+    allow_game_process_injection: false
+    allow_only_input_control: true
+  
+  curious:
+    enabled: false
+    description: "Режим любопытного ребёнка"
+    discord_allowed: false
+    max_risk_level: low
+
+# Конфигурация LLM
+llm:
+  brain_mode: "comet_chat"   # ollama / api / comet_chat
+  provider: "perplexity"
+  
+  ollama:
+    enabled: true
+    base_url: "http://127.0.0.1:11434"
+    model: "llama3"
+  
+  comet_chat:
+    enabled: true
+    description: "Модель в браузере Comet управляет агентом через Tampermonkey"
+    allow_external_commands: true
