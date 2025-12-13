@@ -135,6 +135,48 @@ class SafetyManager:
             print(f"❌ Failed to export: {e}")
             return False
 
+    @staticmethod
+    def check_mode(command: str, category: str = "", target: str = "") -> Tuple[bool, str]:
+        """
+        Проверка ограничений режимов:
+        - fairplay: запрет читов в играх
+        - curious: запрет Discord-отправки и опасных действий
+        """
+        # Читаем конфигурацию режимов
+        try:
+            import yaml
+            with open('backend/config.yaml', 'r', encoding='utf-8') as f:
+                config = yaml.safe_load(f)
+            
+            modes_cfg = config.get('modes', {})
+            active = modes_cfg.get('active', 'normal')
+            mode_cfg = modes_cfg.get(active, {})
+            
+            # NORMAL — без доп.ограничений
+            if active == 'normal':
+                return True, 'OK'
+            
+            # FAIRPLAY — без читов, только input/vision для игр
+            if active == 'fairplay' and mode_cfg.get('enabled', False):
+                if category in ('game_memory', 'cheat', 'process_injection'):
+                    return False, 'Command blocked in fairplay mode'
+                if category == 'game' and target not in ('vision', 'input'):
+                    return False, 'Only vision/input tools allowed in fairplay mode'
+            
+            # CURIOUS — режим любопытного ребёнка
+            if active == 'curious' and mode_cfg.get('enabled', False):
+                if command in ('discordsend', 'discordtasks') or category == 'discord':
+                    if not mode_cfg.get('discord_allowed', False):
+                        return False, 'Discord actions are disabled in curious mode'
+                if category in ('system_critical', 'dangerous'):
+                    return False, 'Dangerous commands are disabled in curious mode'
+            
+            return True, 'OK'
+            
+        except Exception as e:
+            print(f"⚠️ check_mode error: {e}")
+            return True, 'OK'  # В случае ошибки не блокируем
+
 
 class ConfirmationSystem:
     """Web UI / Telegram confirmation interface"""
