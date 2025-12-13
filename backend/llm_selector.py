@@ -282,6 +282,52 @@ class DualAgentSystem:
 
 # =====================
 # ИНИЦИАЛИЗАЦИЯ
+
+# ==============================================
+# LLM CONNECTORS
+# ==============================================
+
+class OllamaConnector:
+        def __init__(self, base_url: str, model: str):
+                    self.base_url = base_url.rstrip('/')
+                    self.model = model
+
+    def generate(self, prompt: str, system: str = '', history: list = None) -> str:
+                import requests
+                payload = {
+                                'model': self.model,
+                                'messages': []
+                            }
+                if system:
+                                payload['messages'].append({'role': 'system', 'content': system})
+                            if history:
+                                            payload['messages'].extend(history)
+                                        payload['messages'].append({'role': 'user', 'content': prompt})
+        r = requests.post(f"{self.base_url}/api/chat", json=payload, timeout=60)
+        r.raise_for_status()
+        return r.json().get('message', {}).get('content', '')
+
+class CometChatConnector:
+        def __init__(self):
+                    pass
+
+    def generate(self, prompt: str, system: str = '', history: list = None) -> str:
+                return '⚠️ Comet Chat Mode: команды приходят через Tampermonkey'
+def get_llm(config: dict):
+        """Get LLM connector based on brain_mode"""
+    brain_mode = config['llm']['brain_mode']
+
+    if brain_mode == 'ollama':
+                return OllamaConnector(
+                    base_url=config['llm']['ollama']['base_url'],
+                    model=config['llm']['ollama']['model']
+                )
+
+    if brain_mode == 'comet_chat':
+                return CometChatConnector()
+
+    # Default to None for other modes (api, etc.)
+    return None
 # =====================
 def initialize_llm(mode: str = 'ollama') -> DualAgentSystem:
     """Инициализируй систему двух агентов"""
