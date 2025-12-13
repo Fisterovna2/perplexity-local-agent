@@ -90,3 +90,59 @@
         initAgent();
     }
 })();
+
+
+// === РЕЖИМ 3: Comet Chat Bridge ===
+const AGENT_API = 'http://127.0.0.1:5000/apiv1/execute';
+
+function parseAgentCommand(text) {
+        const match = text.match(/AGENT_CMD:\s*({[\s\S]*?})/);
+        if (match) {
+                    try {
+                                    return JSON.parse(match[1]);
+                                } catch (e) {
+                                    return null;
+                                }
+                }
+        return null;
+    }
+
+async function sendToLocalAgent(cmdData) {
+        const response = await fetch(AGENT_API, {
+                    method: 'POST',
+                    headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                    body: JSON.stringify({
+                                    source: 'comet_chat',
+                                    command: cmdData.command,
+                                    params: cmdData.params || {},
+                                    category: cmdData.category || '',
+                                    confirmed: cmdData.confirmed || false
+                                })
+                });
+        return response.json();
+    }
+
+function observeCometMessages() {
+        const observer = new MutationObserver((mutations) => {
+                    mutations.forEach(mutation => {
+                                    mutation.addedNodes.forEach(node => {
+                                                        if (node.nodeType === 1) {
+                                                                                const cmd = parseAgentCommand(node.textContent);
+                                                                                if (cmd) {
+                                                                                                            sendToLocalAgent(cmd);
+                                                                                                        }
+                                                                            }
+                                                    });
+                                });
+                });
+        observer.observe(document.body, {
+                    childList: true,
+                    subtree: true
+                });
+    }
+
+if (window.location.href.includes('perplexity.ai')) {
+        setTimeout(observeCometMessages, 2000);
+    }
