@@ -8,6 +8,7 @@ Provides command-line interface for controlling the agent with command grouping
 import os
 import sys
 from typing import Dict, List, Optional
+from commands_executor import executor
 
 class CLIInterface:
     """Interactive CLI interface with command grouping"""
@@ -21,6 +22,11 @@ class CLIInterface:
                     '/game_dota2': 'Автоматизация Dota 2',
                     '/game_beeswarm': 'Автоматизация Bee Swarm Simulator',
                     '/game_status': 'Статус игровой автоматизации'
+                                        '/game_roblox_farm': 'Фарм в Roblox',
+                    '/game_roblox_stop': 'Остановить Roblox',
+                    '/game_dota2_ranked': 'Dota 2 Ranked',
+                    '/game_dota2_turbo': 'Dota 2 Turbo',
+                    '/game_stop_all': 'Остановить все игры',
                 }
             },
             'projects': {
@@ -30,6 +36,8 @@ class CLIInterface:
                     '/project_plan': 'Планирование задач проекта',
                     '/project_status': 'Статус текущих проектов',
                     '/project_decompose': 'Декомпозиция задачи'
+                                        '/project_list': 'Список проектов',
+                    '/project_delete': 'Удалить проект',
                 }
             },
             '3d_modeling': {
@@ -176,8 +184,14 @@ class CLIInterface:
                 print("⚠️  Интеграция с агентом в разработке")
                 
             except KeyboardInterrupt:
-                print("\n\n👋 Прервано пользователем. До свидания!")
-                break
+                # Execute command through executor
+                result = executor.execute(parsed['command'], {'args': parsed['args']})
+                if result['success']:
+                    print(f"✅ Выполнено: {parsed['command']}")
+                    if 'result' in result:
+                        print(f"   Результат: {result['result']}")
+                else:
+                    print(f"❌ Ошибка: {result.get('error', 'Unknown error')}")                break
             except Exception as e:
                 print(f"\n❌ Ошибка: {str(e)}")
 
