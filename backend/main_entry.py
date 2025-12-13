@@ -34,16 +34,40 @@ def set_brain_mode(mode: str):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--web', action='store_true')
+
+    def select_safety_mode():
+            print("\n" + "="*60)
+            print("🛡️ Режим безопасности")
+            print("="*60)
+            print("\n1. ✅ Normal (по умолчанию)")
+            print("2. 🎮 Fairplay (честная игра)")
+            print("3. 🧒 Curious (любопытный)")
+            print("="*60)
+            choice = input("\nВыбери (1/2/3): ").strip()
+            modes = {'1': 'normal', '2': 'fairplay', '3': 'curious'}
+            return modes.get(choice, 'normal')
+
+    def set_safety_mode(mode: str):
+            config = load_config()
+            config['modes']['active'] = mode
+            save_config(config)
+            print(f"\n✅ Режим безопасности: {mode}\n")
     parser.add_argument('--telegram', action='store_true')
     parser.add_argument('--brain', choices=['ollama', 'api', 'comet_chat'])
+        parser.add_argument('--mode', choices=['normal', 'fairplay', 'curious'], help='Safety mode')
     args = parser.parse_args()
     
     if args.brain:
         set_brain_mode(args.brain)
+            if args.mode:
+                        set_safety_mode(args.mode)
     elif not args.web and not args.telegram:
         mode = select_brain_mode()
         if mode:
             set_brain_mode(mode)
+                    safety = select_safety_mode()
+                    if safety:
+                                    set_safety_mode(safety)
     
     if args.web:
         from agent import app
