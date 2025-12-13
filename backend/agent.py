@@ -230,6 +230,16 @@ def execute_command():
         if not allowed:
             logger.warning(f"Unauthorized command attempt: {command}")
             return jsonify({'success': False, 'error': msg}), 403
+
+            # Проверка режима
+            from safety import SafetyManager
+                allowed, msg = SafetyManager.check_mode(
+                            command=data.get('command'),
+                            category=data.get('category', ''),
+                            target=data.get('target', '')
+                        )
+                if not allowed:
+                            return jsonify({'success': False, 'error': msg, 'reason': 'mode_restricted'}), 403
         
         # Confirmation check
         if CONFIG['safety']['require_confirmation'] and not confirmed:
