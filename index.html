@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Human Agent Control</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .header p { opacity: 0.9; font-size: 1.1em; }
+        .status {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #dc3545;
+            animation: pulse 2s infinite;
+        }
+        .status-dot.connected { background: #28a745; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .controls {
+            padding: 30px;
+        }
+        .control-group {
+            margin-bottom: 25px;
+        }
+        .control-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #495057;
+        }
+        .control-group select,
+        .control-group input,
+        .control-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+        .control-group select:focus,
+        .control-group input:focus,
+        .control-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .control-group textarea {
+            min-height: 100px;
+            resize: vertical;
+            font-family: inherit;
+        }
+        .button-group {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        button {
+            padding: 15px 30px;
+            font-size: 1.1em;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(102,126,234,0.4); }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover { background: #5a6268; }
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-danger:hover { background: #c82333; }
+        .log {
+            padding: 20px;
+            background: #f8f9fa;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            padding: 10px;
+            margin-bottom: 10px;
+            background: white;
+            border-left: 4px solid #667eea;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        .log-entry.error { border-left-color: #dc3545; color: #dc3545; }
+        .log-entry.success { border-left-color: #28a745; color: #28a745; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Digital Human Agent</h1>
+            <p>Локальный ИИ-агент с полным контролем над компьютером</p>
+        </div>
+
+        <div class="status">
+            <div class="status-indicator">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Отключено</span>
+            </div>
+            <button onclick="connectWS()" class="btn-secondary" id="connectBtn">Подключиться</button>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="brainMode">🧠 Режим мозга:</label>
+                <select id="brainMode">
+                    <option value="ollama">Ollama (локальный)</option>
+                    <option value="api">API (облачный)</option>
+                    <option value="comet">Comet (гибридный)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="safetyMode">🛡️ Уровень безопасности:</label>
+                <select id="safetyMode">
+                    <option value="normal">Обычный (подтверждения)</option>
+                    <option value="fairplay">Честная игра (все разрешено)</option>
+                    <option value="curious">Любопытный (эксперимент)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="taskInput">💬 Задача для агента:</label>
+                <textarea id="taskInput" placeholder="Напишите, что должен сделать агент...\n\nПример: Найди информацию о погоде в Москве и запиши в файл"></textarea>
+            </div>
+
+            <div class="button-group">
+                <button onclick="sendTask()" class="btn-primary">▶️ Выполнить</button>
+                <button onclick="stopTask()" class="btn-danger">⏹️ Остановить</button>
+            </div>
+        </div>
+
+        <div class="log">
+            <h3 style="margin-bottom: 15px; color: #495057;">📋 Лог событий:</h3>
+            <div id="logContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+
+        function connectWS() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                addLog('Уже подключено', 'success');
+                return;
+            }
+
+            ws = new WebSocket('ws://localhost:8000');
+
+            ws.onopen = () => {
+                document.getElementById('statusDot').classList.add('connected');
+                document.getElementById('statusText').textContent = 'Подключено';
+                document.getElementById('connectBtn').textContent = 'Отключиться';
+                document.getElementById('connectBtn').onclick = disconnectWS;
+                addLog('✅ Подключено к агенту', 'success');
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                addLog(`📨 ${data.type}: ${JSON.stringify(data)}`, 'success');
+            };
+
+            ws.onerror = (error) => {
+                addLog(`❌ Ошибка: ${error}`, 'error');
+            };
+
+            ws.onclose = () => {
+                document.getElementById('statusDot').classList.remove('connected');
+                document.getElementById('statusText').textContent = 'Отключено';
+                document.getElementById('connectBtn').textContent = 'Подключиться';
+                document.getElementById('connectBtn').onclick = connectWS;
+                addLog('⚠️ Соединение закрыто', 'error');
+            };
+        }
+
+        function disconnectWS() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+
+        function sendTask() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                addLog('❌ Сначала подключитесь к агенту', 'error');
+                return;
+            }
+
+            const task = document.getElementById('taskInput').value;
+            const brain = document.getElementById('brainMode').value;
+            const safety = document.getElementById('safetyMode').value;
+
+            if (!task.trim()) {
+                addLog('❌ Введите задачу', 'error');
+                return;
+            }
+
+            const message = {
+                type: 'task',
+                task: task,
+                brain_mode: brain,
+                safety_mode: safety
+            };
+
+            ws.send(JSON.stringify(message));
+            addLog(`📤 Задача отправлена: ${task}`, 'success');
+        }
+
+        function stopTask() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                addLog('❌ Нет активного соединения', 'error');
+                return;
+            }
+
+            ws.send(JSON.stringify({ type: 'stop' }));
+            addLog('⏹️ Отправлен сигнал остановки', 'success');
+        }
+
+        function addLog(message, type = '') {
+            const logContainer = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logContainer.insertBefore(entry, logContainer.firstChild);
+
+            // Ограничение логов
+            while (logContainer.children.length > 50) {
+                logContainer.removeChild(logContainer.lastChild);
+            }
+        }
+
+        // Автоподключение при загрузке
+        window.addEventListener('load', () => {
+            addLog('🚀 Интерфейс загружен');
+        });
+    </script>
+</body>
+</html>
